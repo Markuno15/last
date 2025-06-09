@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIG Sebaran Perumahan - Kabupaten Bandung Barat</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6C63FF;
+      --secondary: #FF6584;
+      --accent: #42C2FF;
+      --dark: #2D3748;
+      --light: #F7FAFC;
+      --gradient: linear-gradient(135deg, var(--primary), var(--accent));
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background-color: #f8f9fa;
+      color: var(--dark);
+      line-height: 1.6;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 5%;
+      background: var(--gradient);
+      color: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+    }
+
+    .logo img {
+      width: 70px;
+      height: auto;
+      margin-right: 15px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    .title {
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    .title h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .title p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .menu {
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-icon {
+      font-size: 24px;
+      cursor: pointer;
+      margin-left: 20px;
+      transition: transform 0.3s;
+    }
+
+    .menu-icon:hover {
+      transform: scale(1.1);
+    }
+
+    .search-container {
+      position: relative;
+    }
+    
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.2);
+      border-radius: 30px;
+      padding: 8px 15px;
+      width: 200px;
+      backdrop-filter: blur(5px);
+      transition: all 0.3s;
+    }
+    
+    .search-box:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .search-input {
+      border: none;
+      background: transparent;
+      padding: 5px;
+      width: 100%;
+      outline: none;
+      font-size: 14px;
+      color: white;
+    }
+    
+    .search-input::placeholder {
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .close-search {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 5px;
+      color: white;
+    }
+
+    .search-result {
+      position: absolute;
+      background: white;
+      border-radius: 10px;
+      width: 100%;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      top: 50px;
+    }
+
+    .search-item {
+      padding: 12px 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--dark);
+      border-bottom: 1px solid #eee;
+    }
+
+    .search-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-item:hover {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .main-container {
+      display: flex;
+      flex-wrap: wrap;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      gap: 30px;
+    }
+
+    .housing-section {
+      flex: 1;
+      min-width: 400px;
+      background: linear-gradient(145deg, #ffffff, #f0f0f0);
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .map-section {
+      flex: 1;
+      min-width: 400px;
+      border-radius: 20px;
+      height: 800px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      overflow: hidden;
+      position: relative;
+      border: none;
+      background: linear-gradient(145deg, #e6f0ff, #c9dfff);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      border-radius: 15px;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 30px;
+      position: relative;
+    }
+
+    .section-title h2 {
+  font-size: 2rem;
+  color: var(--dark);
+  display: inline-block;
+  background: linear-gradient(to right, var(--primary), var(--accent));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+
+    .section-title::after {
+      content: '';
+      display: block;
+      width: 80px;
+      height: 4px;
+      background: var(--gradient);
+      margin: 10px auto;
+      border-radius: 2px;
+    }
+
+    .housing-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 25px;
+      perspective: 1000px;
+      max-height: 700px;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+
+    .housing-grid::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .housing-grid::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .housing-grid::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 10px;
+    }
+
+    .housing-grid::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+    .housing-card {
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+      transform-style: preserve-3d;
+      position: relative;
+      border: 2px solid rgba(108, 99, 255, 0.1);
+    }
+
+    .housing-card:hover {
+      transform: translateY(-10px) rotateX(5deg) scale(1.03);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+      border-color: var(--primary);
+    }
+
+    .housing-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: var(--gradient);
+    }
+
+    .housing-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      transition: transform 0.4s;
+    }
+
+    .housing-card:hover img {
+      transform: scale(1.05);
+    }
+
+    .card-content {
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-content h3 {
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+
+    .card-content p {
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 15px;
+    }
+
+    .card-content .coord {
+      display: inline-block;
+      background: rgba(108, 99, 255, 0.1);
+      color: var(--primary);
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      margin-top: 10px;
+    }
+
+    .facilities {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    .facility-tag {
+      background-color: rgba(66, 194, 255, 0.1);
+      color: #42C2FF;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .facility-tag i {
+      margin-right: 5px;
+      font-size: 0.9rem;
+    }
+
+    .footer {
+      background: var(--gradient);
+      color: white;
+      padding: 30px 0;
+      text-align: center;
+      margin-top: 50px;
+    }
+
+    .biodata-btn {
+      display: inline-block;
+      background: white;
+      color: var(--primary);
+      padding: 12px 30px;
+      border-radius: 30px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      border: none;
+      outline: none;
+    }
+
+    .biodata-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    #biodata-box {
+      display: none;
+      background: white;
+      max-width: 400px;
+      margin: 30px auto;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    #biodata-box img {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-bottom: 20px;
+      border: 5px solid var(--primary);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    #biodata-box h3 {
+      color: var(--primary);
+      margin-bottom: 10px;
+    }
+
+    #biodata-box p {
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .highlight-marker {
+      filter: hue-rotate(120deg) brightness(1.2);
+      transform: scale(1.5);
+      transition: all 0.3s;
+      z-index: 1000 !important;
+    }
+
+    /* Custom Popup Style */
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px !important;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2) !important;
+    }
+
+    .leaflet-popup-content {
+      margin: 15px !important;
+      min-width: 250px;
+    }
+
+    .popup-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .popup-image {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .popup-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 5px;
+    }
+
+    .popup-address {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .popup-facilities {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .popup-facility {
+      background-color: rgba(108, 99, 255, 0.1);
+      color: var(--primary);
+      padding: 3px 8px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .housing-card {
+      animation: fadeIn 0.6s ease-out forwards;
+      opacity: 0;
+    }
+
+    .housing-card:nth-child(1) { animation-delay: 0.1s; }
+    .housing-card:nth-child(2) { animation-delay: 0.2s; }
+    .housing-card:nth-child(3) { animation-delay: 0.3s; }
+    .housing-card:nth-child(4) { animation-delay: 0.4s; }
+    .housing-card:nth-child(5) { animation-delay: 0.5s; }
+    .housing-card:nth-child(6) { animation-delay: 0.6s; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .main-container {
+        flex-direction: column;
+      }
+      
+      .housing-section, .map-section {
+        min-width: 100%;
+      }
+      
+      .map-section {
+        height: 500px;
+      }
+      
+      .header {
+        flex-direction: column;
+        padding: 15px;
+      }
+      
+      .logo {
+        margin-bottom: 15px;
+      }
+      
+      .menu {
+        margin-top: 15px;
+      }
+      
+      .section-title h2 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <header class="header">
+    <div class="logo">
+      <img src="asset/kbb.png" alt="Logo KBB">
+    </div>
+    <div class="title">
+      <h1>KABUPATEN BANDUNG BARAT</h1>
+      <p>Perumahan di Kabupaten Bandung Barat</p>
+    </div>
+    <div class="menu">
+      <div class="search-container" id="searchContainer">
+        <div class="menu-icon" id="menuIcon">🔍</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <section class="housing-section">
+      <div class="section-title">
+        <h2>Perumahan Terbesar dan Terbaik</h2>
+      </div>
+      <div class="housing-grid">
+        <div class="housing-card" onclick="flyToLocation([-6.845052254185587, 107.58959346178416], 'Setiabudhi Regency')">
+          <img src="asset/Regencyy.jpg" alt="Setiabudhi Regency">
+          <div class="card-content">
+            <h3>Setiabudhi Regency</h3>
+            <p>Kawasan perumahan Setiabudhi terletak di Kabupaten Bandung Barat, Jawa Barat. Salah satu perumahan yang nyaman dengan konsep modern dan lingkungan yang asri ini cocok untuk keluarga maupun individu yang mencari tempat tinggal dengan akses mudah ke pusat kota Bandung tetapi tetap memiliki suasana yang tenang.</p>
+            <div class="facilities">
+              <span class="facility-tag"><i class="fas fa-swimming-pool"></i> Kolam Renang</span>
+              <span class="facility-tag"><i class="fas fa-tree"></i> Taman</span>
+              <span class="facility-tag"><i class="fas fa-basketball-ball"></i> Lapangan Olahraga</span>
+              <span class="facility-tag"><i class="fas fa-shield-alt"></i> Keamanan 24 Jam</span>
+              <span class="facility-tag"><i class="fas fa-wifi"></i> WiFi Area</span>
+            </div>
+            <span class="coord">Koordinat: -6.845052, 107.589593</span>
+          </div>
+        </div>
+        <div class="housing-card" onclick="flyToLocation([-6.796797277703275, 107.59364601605486], 'Sharia Islamic Highland')">
+          <img src="asset/sharia.jpeg" alt="Sharia Islamic Highland">
+          <div class="card-content">
+            <h3>Sharia Islamic Highland</h3>
+            <p>Perumahan dengan konsep Islami yang terletak di kawasan Lembang. Menawarkan lingkungan yang sejuk dan asri dengan fasilitas lengkap untuk keluarga muslim.</p>
+            <div class="facilities">
+              <span class="facility-tag"><i class="fas fa-mosque"></i> Masjid</span>
+              <span class="facility-tag"><i class="fas fa-school"></i> TPA</span>
+              <span class="facility-tag"><i class="fas fa-store"></i> Pusat Perbelanjaan</span>
+              <span class="facility-tag"><i class="fas fa-shield-alt"></i> Keamanan 24 Jam</span>
+              <span class="facility-tag"><i class="fas fa-utensils"></i> Restoran Halal</span>
+            </div>
+            <span class="coord">Koordinat: -6.796797, 107.593646</span>
+          </div>
+        </div>
+        <div class="housing-card" onclick="flyToLocation([-6.879864014743676, 107.50892659264562], 'Lembah Batujajar Village')">
+          <img src="asset/lembah.jpeg" alt="Lembah Batujajar Village">
+          <div class="card-content">
+            <h3>Lembah Batujajar Village</h3>
+            <p>Perumahan di Padalarang dengan konsep village living. Menyediakan berbagai tipe rumah dari sederhana hingga mewah dengan lingkungan yang hijau dan asri.</p>
+            <div class="facilities">
+              <span class="facility-tag"><i class="fas fa-parking"></i> Area Parkir Luas</span>
+              <span class="facility-tag"><i class="fas fa-tree"></i> Taman</span>
+              <span class="facility-tag"><i class="fas fa-child"></i> Area Bermain Anak</span>
+              <span class="facility-tag"><i class="fas fa-shield-alt"></i> Keamanan 24 Jam</span>
+              <span class="facility-tag"><i class="fas fa-store"></i> Minimarket</span>
+            </div>
+            <span class="coord">Koordinat: -6.879864, 107.508926</span>
+          </div>
+        </div>
+        <div class="housing-card" onclick="flyToLocation([-6.81122396544998, 107.60122671969411], 'Cluster Pesona Lembang')">
+          <img src="asset/cluster.jpg" alt="Cluster Pesona Lembang">
+          <div class="card-content">
+            <h3>Cluster Pesona Lembang</h3>
+            <p>Cluster eksklusif di kawasan Lembang dengan udara sejuk dan pemandangan indah. Dilengkapi dengan fasilitas modern dan keamanan 24 jam.</p>
+            <div class="facilities">
+              <span class="facility-tag"><i class="fas fa-swimming-pool"></i> Kolam Renang</span>
+              <span class="facility-tag"><i class="fas fa-dumbbell"></i> Gym</span>
+              <span class="facility-tag"><i class="fas fa-wifi"></i> WiFi Area</span>
+              <span class="facility-tag"><i class="fas fa-shield-alt"></i> Keamanan 24 Jam</span>
+              <span class="facility-tag"><i class="fas fa-concierge-bell"></i> Concierge Service</span>
+            </div>
+            <span class="coord">Koordinat: -6.811223, 107.601226</span>
+          </div>
+        </div>
+        <div class="housing-card" onclick="flyToLocation([-6.847480821702561, 107.47802905336464], 'Griya Pasundan')">
+          <img src="asset/griya.jpeg" alt="Griya Pasundan">
+          <div class="card-content">
+            <h3>Griya Pasundan</h3>
+            <p>Perumahan dengan arsitektur khas Sunda modern di Padalarang. Menawarkan kenyamanan hidup dengan harga yang terjangkau dan lokasi strategis.</p>
+            <div class="facilities">
+              <span class="facility-tag"><i class="fas fa-home"></i> Desain Sunda Modern</span>
+              <span class="facility-tag"><i class="fas fa-tree"></i> Taman</span>
+              <span class="facility-tag"><i class="fas fa-child"></i> Area Bermain Anak</span>
+              <span class="facility-tag"><i class="fas fa-shield-alt"></i> Keamanan 24 Jam</span>
+              <span class="facility-tag"><i class="fas fa-store"></i> Pusat Perbelanjaan</span>
+            </div>
+            <span class="coord">Koordinat: -6.847480, 107.478029</span>
+          </div>
+        </div>
+        <div class="housing-card" onclick="flyToLocation([-6.834528034947685, 107.46978244096783], 'Padalarang Techno Regency')">
+          <img src="asset/tecno.jpeg" alt="Padalarang Techno Regency">
+          <div class="card-content">
+            <h3>Padalarang Techno Regency</h3>
+            <p>Kawasan perumahan modern dengan konsep smart living di Padalarang. Dilengkapi dengan teknologi terkini untuk kenyamanan penghuni.</p>
+            <div class="facilities">
+              <span class="facility-tag"><i class="fas fa-robot"></i> Smart Home System</span>
+              <span class="facility-tag"><i class="fas fa-wifi"></i> High-Speed Internet</span>
+              <span class="facility-tag"><i class="fas fa-solar-panel"></i> Energi Terbarukan</span>
+              <span class="facility-tag"><i class="fas fa-shield-alt"></i> Keamanan 24 Jam</span>
+              <span class="facility-tag"><i class="fas fa-car"></i> Charging Station</span>
+            </div>
+            <span class="coord">Koordinat: -6.834528, 107.469782</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="map-section">
+      <div id="map"></div>
+    </section>
+  </div>
+
+  <footer class="footer">
+    <button class="biodata-btn" onclick="showBiodata()">Profile</button>
+    <div id="biodata-box">
+      <img src="asset/pembuat.jpeg" alt="Foto Profil">
+      <h3>Shandy Rizqi Saadilah (2311716)</h3>
+      <p>Mahasiswa Sains Informasi Geografi di Universitas Pendidikan Indonesia</p>
+      <p>Email: unoshandy25@upi.edu</p>
+      <p>Telp: 0812-3456-7890</p>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Data Perumahan dengan foto dan fasilitas
+    const housingLocations = [
+      { 
+        coords: [-6.845052254185587, 107.58959346178416], 
+        name: 'Setiabudhi Regency', 
+        alamat: 'Jl. Sersan Bajuri No.99, Isola, Kec. Sukasari, Kota Bandung, Jawa Barat 40154',
+        image: 'asset/Regencyy.jpg',
+        facilities: ['Kolam Renang', 'Taman', 'Lapangan Olahraga', 'Keamanan 24 Jam', 'WiFi Area']
+      },
+      { 
+        coords: [-6.796797277703275, 107.59364601605486], 
+        name: 'Sharia Islamic Highland', 
+        alamat: 'Sukajaya, Lembang, West Bandung Regency, West Java 40391',
+        image: 'asset/sharia.jpeg',
+        facilities: ['Masjid', 'TPA', 'Pusat Perbelanjaan', 'Keamanan 24 Jam', 'Restoran Halal']
+      },
+      { 
+        coords: [-6.879864014743676, 107.50892659264562], 
+        name: 'Lembah Batujajar Village', 
+        alamat: '4G75+GPG, Jl. Sindangsari, Laksanamekar, Kec. Padalarang, Kabupaten Bandung Barat, Jawa Barat 40553',
+        image: 'asset/lembah.jpeg',
+        facilities: ['Area Parkir Luas', 'Taman', 'Area Bermain Anak', 'Keamanan 24 Jam', 'Minimarket']
+      },
+      { 
+        coords: [-6.81122396544998, 107.60122671969411], 
+        name: 'Cluster Pesona Lembang', 
+        alamat: 'Jl. Kolonel Masturi No.41, Sukajaya, Kec. Lembang, Kabupaten Bandung Barat, Jawa Barat 40391',
+        image: 'asset/cluster.jpg',
+        facilities: ['Kolam Renang', 'Gym', 'WiFi Area', 'Keamanan 24 Jam', 'Concierge Service']
+      },
+      { 
+        coords: [-6.847480821702561, 107.47802905336464], 
+        name: 'Griya Pasundan', 
+        alamat: 'Jl. Sodong Hilir, Kertajaya, Kec. Padalarang, Kabupaten Bandung Barat, Jawa Barat 40553',
+        image: 'asset/griya.jpeg',
+        facilities: ['Desain Sunda Modern', 'Taman', 'Area Bermain Anak', 'Keamanan 24 Jam', 'Pusat Perbelanjaan']
+      },
+      { 
+        coords: [-6.834528034947685, 107.46978244096783], 
+        name: 'Padalarang Techno Regency', 
+        alamat: 'Techno Regency, Jl. Kepuh, Padalarang, Kec. Padalarang, Kabupaten Bandung Barat, Jawa Barat 40553',
+        image: 'asset/tecno.jpeg',
+        facilities: ['Smart Home System', 'High-Speed Internet', 'Energi Terbarukan', 'Keamanan 24 Jam', 'Charging Station']
+      },
+      { 
+        coords: [-6.861705869588362, 107.5101791708998], 
+        name: 'Cluster Selaras Cimareme', 
+        alamat: 'Jl. Cikandang No.79, Cimareme, Kec. Ngamprah, Kabupaten Bandung Barat, Jawa Barat 40553',
+        image: 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Taman', 'Area Bermain Anak', 'Keamanan 24 Jam', 'Jogging Track']
+      },
+      { 
+        coords: [-6.856031056156536, 107.50263580116025], 
+        name: 'Perumahan Cimareme Indah', 
+        alamat: 'gerbang coklat no.47, perum Jl. Cimareme Indah No.2 kavling D1, Cimareme, Kec. Ngamprah, Kabupaten Bandung Barat, Jawa Barat 40552',
+        image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Taman', 'Keamanan 24 Jam', 'Area Parkir']
+      },
+      { 
+        coords: [-6.850389194896744, 107.52512236545604], 
+        name: 'Perumahan Puri Agung Lestari', 
+        alamat: 'Ciloa, Cilame, Kec. Ngamprah, Kabupaten Bandung Barat, Jawa Barat 40552',
+        image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Taman', 'Keamanan 24 Jam', 'Area Bermain Anak']
+      },
+      { 
+        coords: [-6.849015227926934, 107.50781303638344], 
+        name: 'Cluster Alsagriya', 
+        alamat: 'Jl. Simpati, RT.003/RW.005, Cilame, Kec. Ngamprah, Kabupaten Bandung Barat, Jawa Barat 40552',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Kolam Renang', 'Taman', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.853764366448089, 107.57915292914002], 
+        name: 'Serra Valley De Lima Residence', 
+        alamat: 'Jl. Waruga Jaya No.3, Ciwaruga, Parongpong, Jawa, Barat, Kabupaten Bandung Barat, Jawa Barat 40559',
+        image: 'asset/delima.jpeg',
+        facilities: ['Fasilitas Hiburan', 'Fasilitas Umum', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.8536500475083395, 107.57979345037324], 
+        name: 'Komplek Serra Valley', 
+        alamat: '4HWH+8VQ, Ciwaruga, Parongpong, West Bandung Regency, West Java 40559',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['One Gate System', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.8659272457608616, 107.57200069467233], 
+        name: 'Duta Vista', 
+        alamat: 'Duta Vista, Jl. Polban I, Ciwaruga, Kec. Parongpong, Kabupaten Bandung Barat, Jawa Barat 40559',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['desain elegan dan konsep mewah minimalis', 'fasilitas pendidikan', 'fasilitas medis']
+      },
+      { 
+        coords: [-6.867155372040605, 107.56503072971485], 
+        name: 'Setra Duta Sari Wangi', 
+        alamat: 'Jl. Setra Duta Sariwangi, Sariwangi, Parongpong, Sariwangi, Bandung Barat, Kabupaten Bandung Barat, Jawa Barat 40559',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Pintu gerbang utama dengan keamanan 24 jam', 'Taman bermain anak']
+      },
+      { 
+        coords: [-6.86139125224762, 107.56858381734942], 
+        name: 'Perumahan Bumi Sariwangi 1', 
+        alamat: '4HP9+X97, Jl. Bumi Sariwangi 1, Sariwangi, Kec. Parongpong, Kabupaten Bandung Barat, Jawa Barat 40559',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['lingkungan yang tertata asri dan nyaman', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.861391314197797, 107.56763410479364], 
+        name: 'Perumahan Bumi Sariwangi II, Cluster Anggrek', 
+        alamat: 'Jl. Sariwangi Selatan, Sariwangi, Kec. Parongpong, Kabupaten Bandung Barat, Jawa Barat 405592',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Dekat Fasilitas Kesehatan', 'dekat pusat belanja', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.852636328245973, 107.5655988282207], 
+        name: 'Green Ville', 
+        alamat: 'Cihanjuang, Parongpong, West Bandung Regency, West Java 40559',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Kolam Renang', 'Taman', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.837583626341981, 107.5550164055986], 
+        name: 'Bukit Parama Regency', 
+        alamat: 'Jl. Kamarung, Padaasih, Kec. Cisarua, Kabupaten Bandung Barat, Jawa Barat',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Kolam Renang', 'Taman', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.854933256488727, 107.50693449409589], 
+        name: 'Perumahan Cilame Permai', 
+        alamat: 'Jl. Roket No.cc 33, Cilame, Kec. Ngamprah, Kabupaten Bandung Barat, Jawa Barat 40552',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Kolam Renang', 'Taman', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.8514040322452905, 107.50003016155658], 
+        name: 'Perumahan The Green Hill Taman Sibolang', 
+        alamat: 'Jl. Caringin, Margajaya, Kec. Ngamprah, Kabupaten Bandung Barat, Jawa Barat 40552',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Kolam Renang', 'Taman', 'Keamanan 24 Jam']
+      },
+      { 
+        coords: [-6.838308745301498, 107.46743388357748], 
+        name: 'Permata Padalarang', 
+        alamat: 'Jl. Permata Padalarang, Padalarang, Kec. Padalarang, Kabupaten Bandung Barat, Jawa Barat 40553',
+        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        facilities: ['Kolam Renang', 'Taman', 'Keamanan 24 Jam']
+      }
+    ];
+
+    // Inisialisasi Peta dengan gaya yang lebih colorful
+    const map = L.map('map').setView([-6.8706, 107.5272], 12);
+    
+    // Gunakan basemap yang lebih colorful
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>'
+    }).addTo(map);
+
+    // Tambahkan layer tambahan untuk warna yang lebih menarik
+    L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-labels/{z}/{x}/{y}{r}.{ext}', {
+      attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      ext: 'png'
+    }).addTo(map);
+
+    // Custom icon yang lebih colorful
+    const housingIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      shadowSize: [41, 41]
+    });
+
+    // Fungsi untuk membuat konten popup yang lebih kaya
+    function createPopupContent(housing) {
+      return `
+        <div class="popup-content">
+          <img src="${housing.image}" alt="${housing.name}" class="popup-image">
+          <h3 class="popup-title">${housing.name}</h3>
+          <p class="popup-address">${housing.alamat}</p>
+          <div class="popup-facilities">
+            ${housing.facilities.map(facility => `<span class="popup-facility">${facility}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Tambahkan Marker untuk setiap perumahan dengan popup yang lebih baik
+    const markers = [];
+    housingLocations.forEach(loc => {
+      const marker = L.marker(loc.coords, {icon: housingIcon})
+        .bindPopup(createPopupContent(loc), {
+          maxWidth: 300,
+          minWidth: 250
+        })
+        .addTo(map);
+      markers.push({ marker, name: loc.name, coords: loc.coords });
+    });
+
+    // Fungsi untuk zoom ke lokasi tertentu
+    let currentHighlight = null;
+    function flyToLocation(coords, name) {
+      map.flyTo(coords, 15);
+      
+      // Highlight marker yang dipilih
+      markers.forEach(item => {
+        if (item.name === name) {
+          item.marker._icon.classList.add('highlight-marker');
+          item.marker.openPopup();
+          currentHighlight = item.marker;
+        } else {
+          item.marker._icon.classList.remove('highlight-marker');
+        }
+      });
+    }
+
+    // Fungsi untuk menampilkan biodata
+    function showBiodata() {
+      const box = document.getElementById('biodata-box');
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Fungsi untuk Search Box
+    function showSearch() {
+      const searchContainer = document.getElementById('searchContainer');
+      
+      // Kosongkan kontainer terlebih dahulu
+      searchContainer.innerHTML = '';
+      
+      // Buat elemen search box
+      const searchBox = document.createElement('div');
+      searchBox.className = 'search-box';
+      
+      // Buat input field
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Cari Perumahan...';
+      input.className = 'search-input';
+      input.id = 'searchInput';
+      
+      // Buat tombol close
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '×';
+      closeBtn.className = 'close-search';
+      closeBtn.onclick = function() {
+        // Kembalikan ke menu icon saat tombol close diklik
+        searchContainer.innerHTML = '<div class="menu-icon" id="menuIcon">🔍</div>';
+        // Tambahkan event listener kembali
+        document.getElementById('menuIcon').addEventListener('click', showSearch);
+      };
+      
+      // Gabungkan semua elemen
+      searchBox.appendChild(input);
+      searchBox.appendChild(closeBtn);
+      searchContainer.appendChild(searchBox);
+      
+      // Buat container untuk hasil pencarian
+      const resultContainer = document.createElement('div');
+      resultContainer.className = 'search-result';
+      resultContainer.id = 'searchResult';
+      searchContainer.appendChild(resultContainer);
+      
+      // Fokuskan ke input field
+      input.focus();
+      
+      // Tambahkan event listener untuk input
+      input.addEventListener('input', function() {
+        performSearch(input.value);
+      });
+    }
+    
+    // Fungsi untuk melakukan pencarian
+    function performSearch(query) {
+      const resultContainer = document.getElementById('searchResult');
+      resultContainer.innerHTML = '';
+      
+      if (query.length < 2) {
+        resultContainer.style.display = 'none';
+        return;
+      }
+      
+      const results = housingLocations.filter(loc => 
+        loc.name.toLowerCase().includes(query.toLowerCase()) ||
+        loc.alamat.toLowerCase().includes(query.toLowerCase())
+      );
+      
+      if (results.length > 0) {
+        results.forEach(result => {
+          const item = document.createElement('div');
+          item.className = 'search-item';
+          item.textContent = result.name;
+          item.onclick = function() {
+            flyToLocation(result.coords, result.name);
+            resultContainer.style.display = 'none';
+          };
+          resultContainer.appendChild(item);
+        });
+        resultContainer.style.display = 'block';
+      } else {
+        const item = document.createElement('div');
+        item.className = 'search-item';
+        item.textContent = 'Perumahan tidak ditemukan';
+        resultContainer.appendChild(item);
+        resultContainer.style.display = 'block';
+      }
+    }
+    
+    // Inisialisasi - tambahkan event listener ke menu icon
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('menuIcon').addEventListener('click', showSearch);
+      
+      // Tutup hasil pencarian ketika klik di luar
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+          const resultContainer = document.getElementById('searchResult');
+          if (resultContainer) resultContainer.style.display = 'none';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
